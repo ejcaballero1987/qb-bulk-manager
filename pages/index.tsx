@@ -49,54 +49,80 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          
-          <div className="border-b border-gray-200 pb-5 mb-8">
-            <h1 className="text-3xl font-bold leading-6 text-gray-900">
-              QuickBooks Bulk Manager
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Gestión masiva de entidades Bills y BillPayments con soporte multi-compañía
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        
+        {/* Modern Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-6 shadow-lg">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
+            QuickBooks Bulk Manager
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Gestión inteligente y masiva de Bills y BillPayments con control avanzado de relaciones
+          </p>
+        </div>
 
-          <nav className="flex space-x-8 mb-8" aria-label="Progress">
+        {/* Modern Progress Steps */}
+        <div className="flex justify-center mb-12">
+          <div className="flex items-center space-x-4 bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             {steps.map((step, index) => (
-              <button
-                key={step.id}
-                onClick={() => {
-                  if (step.completed || index === 0) {
-                    setCurrentStep(step.id as any);
-                  }
-                }}
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  step.active
-                    ? 'bg-blue-100 text-blue-700'
-                    : step.completed
-                    ? 'bg-green-100 text-green-700 cursor-pointer hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                }`}
-                disabled={!step.completed && !step.active && index !== 0}
-              >
-                <span className={`w-2 h-2 rounded-full mr-2 ${
-                  step.active ? 'bg-blue-600' : step.completed ? 'bg-green-600' : 'bg-gray-400'
-                }`} />
-                {step.name}
-              </button>
+              <div key={step.id} className="flex items-center">
+                <button
+                  onClick={() => {
+                    if (step.completed || index === 0) {
+                      setCurrentStep(step.id as any);
+                    }
+                  }}
+                  disabled={!step.completed && !step.active && index !== 0}
+                  className={`group flex items-center px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                    step.active
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-105'
+                      : step.completed
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-105 cursor-pointer shadow-md'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full mr-3 flex items-center justify-center text-sm font-bold ${
+                    step.active ? 'bg-white/20' : step.completed ? 'bg-white/20' : 'bg-gray-300'
+                  }`}>
+                    {step.completed ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span className={step.active ? 'text-white' : 'text-gray-600'}>{index + 1}</span>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold">{step.name}</span>
+                </button>
+                
+                {index < steps.length - 1 && (
+                  <div className={`w-8 h-0.5 mx-2 ${
+                    steps[index + 1].completed || steps[index + 1].active
+                      ? 'bg-gradient-to-r from-green-500 to-blue-500'
+                      : 'bg-gray-300'
+                  }`} />
+                )}
+              </div>
             ))}
             
             <button
               onClick={resetProcess}
-              className="ml-auto px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="ml-6 px-4 py-2 text-sm font-medium text-gray-600 hover:text-red-600 border-2 border-gray-300 hover:border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200"
             >
-              Reset Process
+              🔄 Reset
             </button>
-          </nav>
+          </div>
+        </div>
 
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
+        {/* Modern Content Card */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+          <div className="p-8">
               
               {currentStep === 'query' && (
                 <DataQueryComponent
