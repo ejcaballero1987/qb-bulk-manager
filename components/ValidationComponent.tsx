@@ -3,7 +3,7 @@ import { DataValidator, ValidationResult } from '../lib/validation';
 
 interface ValidationComponentProps {
   mappedData: any;
-  onComplete: (validationResults: ValidationResult) => void;
+  onComplete: (validationResults: any) => void;
   onBack: () => void;
 }
 
