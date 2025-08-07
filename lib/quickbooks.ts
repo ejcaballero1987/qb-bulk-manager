@@ -60,7 +60,7 @@ class QuickBooksService {
     this.isProcessingQueue = false;
   }
 
-  private async queueRequest<T>(requestFunc: () => Promise<T>): Promise<T> {
+  public async queueRequest<T>(requestFunc: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.requestQueue.push(async () => {
         try {
