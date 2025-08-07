@@ -38,7 +38,7 @@ export class DataLoader {
             fileName: file.name
           });
         },
-        error: (error) => {
+        error: (error: any) => {
           reject(new Error(`CSV parsing error: ${error.message}`));
         }
       });
@@ -65,7 +65,7 @@ export class DataLoader {
             columns
           });
         },
-        error: (error) => {
+        error: (error: any) => {
           reject(new Error(`Text parsing error: ${error.message}`));
         }
       });
