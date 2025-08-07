@@ -13,6 +13,7 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
   const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
   const [previewData, setPreviewData] = useState<any[]>([]);
+  const [columnWidths, setColumnWidths] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
     const defaultMappings = DataValidator.getEntityFieldMappings(entityType);
@@ -59,6 +60,36 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
     };
 
     onComplete(mappedResult);
+  };
+
+  const getColumnWidth = (column: string) => {
+    return columnWidths[column] || 150;
+  };
+
+  const handleMouseDown = (column: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = getColumnWidth(column);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(80, startWidth + (e.clientX - startX));
+      setColumnWidths(prev => ({
+        ...prev,
+        [column]: newWidth
+      }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
   };
 
   return (
@@ -154,10 +185,10 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
 
           <div className="border border-gray-200 rounded-md">
             <div className="max-h-96 overflow-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0">
+              <table className="divide-y divide-gray-200" style={{ width: 'max-content', minWidth: '100%' }}>
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="w-8 px-2 py-2 sticky left-0 bg-gray-50 border-r border-gray-200 z-10">
+                    <th className="px-3 py-2 bg-gray-50 border-r border-gray-200" style={{ minWidth: '50px', width: '50px' }}>
                       <input
                         type="checkbox"
                         checked={selectedRecords.length === queryData.data.length && queryData.data.length > 0}
@@ -166,12 +197,24 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
                       />
                     </th>
                     {queryData.columns.map((column, index) => (
-                      <th key={column} className={`px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap ${
-                        index < 3 ? 'sticky bg-gray-50 z-10' : ''
-                      }`} style={index === 0 ? { left: '32px' } : index === 1 ? { left: '140px' } : index === 2 ? { left: '250px' } : {}}>
-                        <div className="truncate max-w-[100px]" title={column}>
-                          {column}
+                      <th 
+                        key={column} 
+                        className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-r border-gray-200 relative"
+                        style={{ 
+                          width: getColumnWidth(column),
+                          minWidth: '80px'
+                        }}
+                      >
+                        <div className="flex items-center justify-between pr-2">
+                          <span className="truncate" title={column}>
+                            {column}
+                          </span>
                         </div>
+                        <div 
+                          className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 bg-gray-300 opacity-50 hover:opacity-100"
+                          onMouseDown={(e) => handleMouseDown(column, e)}
+                          title="Drag to resize column"
+                        ></div>
                       </th>
                     ))}
                   </tr>
@@ -179,7 +222,7 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
                 <tbody className="bg-white divide-y divide-gray-200">
                   {queryData.data.map((record, index) => (
                     <tr key={index} className={selectedRecords.includes(index) ? 'bg-blue-50' : 'hover:bg-gray-50'}>
-                      <td className="px-2 py-2 sticky left-0 bg-inherit border-r border-gray-200 z-10">
+                      <td className="px-3 py-2 border-r border-gray-200" style={{ minWidth: '50px', width: '50px' }}>
                         <input
                           type="checkbox"
                           checked={selectedRecords.includes(index)}
@@ -187,11 +230,17 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
                           className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
                       </td>
-                      {queryData.columns.map((column, colIndex) => (
-                        <td key={column} className={`px-2 py-2 text-sm text-gray-900 whitespace-nowrap ${
-                          colIndex < 3 ? 'sticky bg-inherit z-10' : ''
-                        }`} style={colIndex === 0 ? { left: '32px' } : colIndex === 1 ? { left: '140px' } : colIndex === 2 ? { left: '250px' } : {}}>
-                          <div className="max-w-[100px] truncate" title={String(record[column] || '')}>
+                      {queryData.columns.map((column) => (
+                        <td 
+                          key={column} 
+                          className="px-3 py-2 text-sm text-gray-900 border-r border-gray-200"
+                          style={{ 
+                            width: getColumnWidth(column),
+                            minWidth: '80px',
+                            maxWidth: getColumnWidth(column)
+                          }}
+                        >
+                          <div className="truncate" title={String(record[column] || '')}>
                             {String(record[column] || '')}
                           </div>
                         </td>
@@ -202,9 +251,36 @@ export default function FieldMappingComponent({ queryData, onComplete, onBack }:
               </table>
             </div>
             <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span>Showing {queryData.data.length} records with {queryData.columns.length} columns</span>
-                <span>💡 Scroll horizontally to see all columns</span>
+                <div className="flex items-center space-x-4">
+                  <span>💡 Drag column borders to resize</span>
+                  <button 
+                    onClick={() => {
+                      // Reset to default widths
+                      const newWidths: {[key: string]: number} = {};
+                      queryData.columns.forEach((column: string) => {
+                        // Calculate width based on column name length and content
+                        const headerLength = column.length * 8 + 40; // Approximate pixel width
+                        const minWidth = Math.max(120, headerLength);
+                        newWidths[column] = Math.min(minWidth, 200); // Cap at 200px
+                      });
+                      setColumnWidths(newWidths);
+                    }}
+                    className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                  >
+                    Auto-size columns
+                  </button>
+                  <button 
+                    onClick={() => {
+                      // Reset all columns to default width
+                      setColumnWidths({});
+                    }}
+                    className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  >
+                    Reset widths
+                  </button>
+                </div>
               </div>
             </div>
           </div>
