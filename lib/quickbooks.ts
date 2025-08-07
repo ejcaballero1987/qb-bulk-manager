@@ -232,6 +232,101 @@ class QuickBooksService {
     return results;
   }
 
+  async bulkDeleteWithRelatedRecords(
+    records: Array<{
+      txn_id?: string;
+      billpayment_id?: string;
+      txn_type?: string;
+      doc_num?: string;
+      deleteStrategy: 'bill_only' | 'both' | 'payment_only';
+    }>
+  ): Promise<any[]> {
+    const results = [];
+    
+    for (const record of records) {
+      try {
+        const recordResult = {
+          record,
+          operations: [] as any[],
+          status: 'SUCCESS' as 'SUCCESS' | 'PARTIAL' | 'ERROR',
+          errors: [] as string[]
+        };
+
+        // Strategy 1: Delete BillPayment first (if exists and requested)
+        if (record.billpayment_id && (record.deleteStrategy === 'both' || record.deleteStrategy === 'payment_only')) {
+          try {
+            const billPaymentData = await this.readBillPayment(record.billpayment_id);
+            const syncToken = billPaymentData.QueryResponse.BillPayment[0].SyncToken;
+            const deleteResult = await this.deleteBillPayment(record.billpayment_id, syncToken);
+            
+            recordResult.operations.push({
+              type: 'DELETE_BILLPAYMENT',
+              id: record.billpayment_id,
+              result: deleteResult,
+              status: 'SUCCESS'
+            });
+          } catch (error: any) {
+            recordResult.errors.push(`BillPayment deletion failed: ${error.message}`);
+            recordResult.status = 'PARTIAL';
+            
+            recordResult.operations.push({
+              type: 'DELETE_BILLPAYMENT',
+              id: record.billpayment_id,
+              error: error.message,
+              status: 'ERROR'
+            });
+          }
+        }
+
+        // Strategy 2: Delete Bill (if requested)
+        if (record.txn_id && (record.deleteStrategy === 'both' || record.deleteStrategy === 'bill_only')) {
+          try {
+            const billData = await this.readBill(record.txn_id);
+            const syncToken = billData.QueryResponse.Bill[0].SyncToken;
+            const deleteResult = await this.deleteBill(record.txn_id, syncToken);
+            
+            recordResult.operations.push({
+              type: 'DELETE_BILL',
+              id: record.txn_id,
+              result: deleteResult,
+              status: 'SUCCESS'
+            });
+          } catch (error: any) {
+            recordResult.errors.push(`Bill deletion failed: ${error.message}`);
+            recordResult.status = recordResult.status === 'SUCCESS' ? 'PARTIAL' : 'ERROR';
+            
+            recordResult.operations.push({
+              type: 'DELETE_BILL',
+              id: record.txn_id,
+              error: error.message,
+              status: 'ERROR'
+            });
+          }
+        }
+
+        // Determine final status
+        if (recordResult.operations.length === 0) {
+          recordResult.status = 'ERROR';
+          recordResult.errors.push('No operations performed - invalid strategy or missing IDs');
+        } else if (recordResult.errors.length === 0) {
+          recordResult.status = 'SUCCESS';
+        }
+
+        results.push(recordResult);
+
+      } catch (error: any) {
+        results.push({
+          record,
+          operations: [],
+          status: 'ERROR' as const,
+          errors: [`Unexpected error: ${error.message}`]
+        });
+      }
+    }
+    
+    return results;
+  }
+
   getOperationLogs(): OperationLog[] {
     return this.operationLogs;
   }

@@ -68,7 +68,7 @@ export default function ValidationComponent({ mappedData, onComplete, onBack }: 
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className={`p-4 rounded-lg border-2 ${
           validationResults.isValid 
             ? 'border-green-200 bg-green-50' 
@@ -85,22 +85,54 @@ export default function ValidationComponent({ mappedData, onComplete, onBack }: 
           <p className={`mt-1 text-sm ${
             validationResults.isValid ? 'text-green-700' : 'text-red-700'
           }`}>
-            {validationResults.isValid ? 'All validations passed' : 'Validation issues found'}
+            {validationResults.isValid ? 'Ready to process' : 'Issues found'}
           </p>
         </div>
 
         <div className="p-4 rounded-lg border-2 border-blue-200 bg-blue-50">
-          <div className="font-medium text-gray-900">Total Records</div>
+          <div className="font-medium text-gray-900">Selected Records</div>
           <p className="mt-1 text-2xl font-bold text-blue-600">
             {mappedData.selectedRecords.length}
           </p>
+          <p className="text-xs text-blue-600">Ready for deletion</p>
         </div>
 
-        <div className="p-4 rounded-lg border-2 border-yellow-200 bg-yellow-50">
-          <div className="font-medium text-gray-900">Duplicates Found</div>
-          <p className="mt-1 text-2xl font-bold text-yellow-600">
-            {validationResults.duplicates.length}
+        <div className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50">
+          <div className="font-medium text-gray-900">Bills to Delete</div>
+          <p className="mt-1 text-2xl font-bold text-purple-600">
+            {mappedData.selectedRecords.filter((record: any) => record.txn_type === 'Bill' || !record.billpayment_id).length}
           </p>
+          <p className="text-xs text-purple-600">Individual bills</p>
+        </div>
+
+        <div className="p-4 rounded-lg border-2 border-orange-200 bg-orange-50">
+          <div className="font-medium text-gray-900">BillPayments to Delete</div>
+          <p className="mt-1 text-2xl font-bold text-orange-600">
+            {mappedData.selectedRecords.filter((record: any) => record.billpayment_id).length}
+          </p>
+          <p className="text-xs text-orange-600">Related payments</p>
+        </div>
+      </div>
+
+      {/* Related Records Detection */}
+      <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800">Related Records Detection</h3>
+            <div className="mt-2 text-sm text-blue-700">
+              <p className="mb-2">The system has detected the following scenarios in your selected records:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Bills only:</strong> {mappedData.selectedRecords.filter((record: any) => !record.billpayment_id).length} records will delete just the Bill</li>
+                <li><strong>Bills with BillPayments:</strong> {mappedData.selectedRecords.filter((record: any) => record.billpayment_id).length} records have related payments</li>
+                <li><strong>Strategy:</strong> For records with BillPayments, you'll be asked if you want to delete both or just the Bill</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 

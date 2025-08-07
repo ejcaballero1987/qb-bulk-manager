@@ -12,6 +12,7 @@ export default function BulkOperationsComponent({ validationResults, mappedData,
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentItem, setCurrentItem] = useState('');
+  const [deleteStrategies, setDeleteStrategies] = useState<{[key: string]: 'bill_only' | 'both' | 'payment_only'}>({});
   const [qbCredentials, setQbCredentials] = useState({
     accessToken: '',
     realmId: '',
@@ -28,16 +29,25 @@ export default function BulkOperationsComponent({ validationResults, mappedData,
     setProgress(0);
 
     try {
-      const entityIds = mappedData.selectedRecords.map((record: any) => {
-        const mapping = mappedData.fieldMappings.find((m: any) => 
-          m.targetField === (mappedData.entityType === 'Bill' ? 'Id' : 'Id')
-        );
-        return record[mapping?.sourceField || 'txn_id'];
-      }).filter(Boolean);
+      // Prepare records with their deletion strategies
+      const records = mappedData.selectedRecords.map((record: any) => {
+        const hasPayment = Boolean(record.billpayment_id);
+        const strategy = hasPayment 
+          ? (deleteStrategies[record.txn_id] || 'both')
+          : 'bill_only';
 
-      setCurrentItem(`Processing ${entityIds.length} ${mappedData.entityType}s...`);
+        return {
+          txn_id: record.txn_id,
+          billpayment_id: record.billpayment_id,
+          txn_type: record.txn_type,
+          doc_num: record.doc_num,
+          deleteStrategy: strategy
+        };
+      });
 
-      const response = await fetch('/api/quickbooks/bulk-delete', {
+      setCurrentItem(`Processing ${records.length} records with advanced deletion logic...`);
+
+      const response = await fetch('/api/quickbooks/bulk-delete-advanced', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,8 +56,7 @@ export default function BulkOperationsComponent({ validationResults, mappedData,
           accessToken: qbCredentials.accessToken,
           realmId: qbCredentials.realmId,
           baseUrl: qbCredentials.baseUrl,
-          entityType: mappedData.entityType,
-          entityIds
+          records
         }),
       });
 
@@ -58,7 +67,7 @@ export default function BulkOperationsComponent({ validationResults, mappedData,
       }
 
       setProgress(100);
-      setCurrentItem('Operation completed');
+      setCurrentItem('Advanced deletion completed');
       
       onComplete({
         ...result,
@@ -89,9 +98,84 @@ export default function BulkOperationsComponent({ validationResults, mappedData,
       <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
         <div className="text-sm text-blue-700">
           <span className="font-medium">Ready to process:</span>
-          <span className="ml-2">{mappedData.selectedRecords.length} {mappedData.entityType} records</span>
+          <span className="ml-2">{mappedData.selectedRecords.length} records</span>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+            <span>Bills only: {mappedData.selectedRecords.filter((r: any) => !r.billpayment_id).length}</span>
+            <span>Bills + Payments: {mappedData.selectedRecords.filter((r: any) => r.billpayment_id).length}</span>
+            <span>Strategies configured: {Object.keys(deleteStrategies).length}</span>
+          </div>
         </div>
       </div>
+
+      {/* Delete Strategy Configuration */}
+      {mappedData.selectedRecords.filter((r: any) => r.billpayment_id).length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+          <h3 className="text-sm font-medium text-yellow-800 mb-3">
+            Deletion Strategy for Records with BillPayments ({mappedData.selectedRecords.filter((r: any) => r.billpayment_id).length} records)
+          </h3>
+          
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {mappedData.selectedRecords
+              .filter((record: any) => record.billpayment_id)
+              .map((record: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      Doc: {record.doc_num || 'N/A'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Bill ID: {record.txn_id} • Payment ID: {record.billpayment_id}
+                    </div>
+                  </div>
+                  
+                  <select
+                    value={deleteStrategies[record.txn_id] || 'both'}
+                    onChange={(e) => setDeleteStrategies(prev => ({
+                      ...prev,
+                      [record.txn_id]: e.target.value as 'bill_only' | 'both' | 'payment_only'
+                    }))}
+                    className="ml-3 text-xs border-gray-300 rounded focus:ring-yellow-500 focus:border-yellow-500"
+                  >
+                    <option value="both">Delete Both</option>
+                    <option value="bill_only">Bill Only</option>
+                    <option value="payment_only">Payment Only</option>
+                  </select>
+                </div>
+              ))}
+          </div>
+
+          <div className="mt-3 flex space-x-2">
+            <button
+              onClick={() => {
+                const strategies: {[key: string]: 'bill_only' | 'both' | 'payment_only'} = {};
+                mappedData.selectedRecords
+                  .filter((r: any) => r.billpayment_id)
+                  .forEach((r: any) => {
+                    strategies[r.txn_id] = 'both';
+                  });
+                setDeleteStrategies(strategies);
+              }}
+              className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+            >
+              Set All: Delete Both
+            </button>
+            <button
+              onClick={() => {
+                const strategies: {[key: string]: 'bill_only' | 'both' | 'payment_only'} = {};
+                mappedData.selectedRecords
+                  .filter((r: any) => r.billpayment_id)
+                  .forEach((r: any) => {
+                    strategies[r.txn_id] = 'bill_only';
+                  });
+                setDeleteStrategies(strategies);
+              }}
+              className="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+            >
+              Set All: Bills Only
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
